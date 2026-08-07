@@ -26,7 +26,12 @@ COLUMNS = [
 
 
 def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    """Return the canonical 13-column incident dataset."""
+    """Return the canonical 13-column incident dataset.
+
+    Important: do not call df.fillna("") on the whole dataframe because
+    the Year column uses pandas nullable Int64 and cannot accept an empty
+    string. Handle Year separately and fill text columns only.
+    """
     df = df.copy()
 
     for col in COLUMNS:
@@ -34,14 +39,14 @@ def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             df[col] = ""
 
     df = df[COLUMNS].copy()
-    df = df.fillna("")
 
     # Keep Year sortable as a nullable integer where possible.
     year_numeric = pd.to_numeric(df["Year"], errors="coerce")
     df["Year"] = year_numeric.astype("Int64")
 
+    # Fill/clean only text columns.
     for col in COLUMNS[1:]:
-        df[col] = df[col].astype(str).str.strip()
+        df[col] = df[col].fillna("").astype(str).str.strip()
 
     # Drop accidental blank separator rows only.
     df = df[df["Incident Name"].str.strip() != ""].reset_index(drop=True)
@@ -76,6 +81,7 @@ def reset_session_dataset() -> None:
 
 def csv_bytes(df: pd.DataFrame) -> bytes:
     clean = normalize_dataframe(df).copy()
+    # Convert nullable integer Year to plain text only for CSV export.
     clean["Year"] = clean["Year"].astype("string").fillna("")
     return clean.to_csv(index=False).encode("utf-8-sig")
 
@@ -90,4 +96,4 @@ def unique_nonempty(df: pd.DataFrame, column: str) -> list[str]:
         .unique()
         .tolist()
     )
-    return sorted(values, key=lambda x: x.lower())
+    return sorted(values, key=lambda x: x.lower()
