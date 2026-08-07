@@ -96,4 +96,4 @@ def unique_nonempty(df: pd.DataFrame, column: str) -> list[str]:
         .unique()
         .tolist()
     )
-    return sorted(values, key=lambda x: x.lower()
+    return sorted(values, key=lambda x: x.lower())
